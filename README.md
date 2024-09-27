@@ -13,8 +13,8 @@
    B = Previous Song
    C = Pause present playing song and Resume Playing
    D = Toggle sequential Song Order or Shuffle
-   * = Enter key of 3 digit song selection
-   # = Not Mapped or used yet
+    * = Enter key of 3 digit song selection
+    # = Not Mapped or used yet
   
   SD card stores file names uppercase 8.3 filename (ie TRACK00x.MP3)
   My music player extracts the mp3 metadata from file of Title & Artist
