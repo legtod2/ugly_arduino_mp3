@@ -4,6 +4,8 @@
    - lcd1604_i2c 20x4 lcd display
    - 4x4 Keypad 
 
+  Reads the mp3 meta-data to display the artist and song on the LCD
+  
   Use 4x4 keypad to select 3 digit track # then hit * key to start playing
   By default starts playing songs from track000.mp3 to track999.mp3 
   Press the D key to use the shuffled songs order or press D key to return to sequential order
