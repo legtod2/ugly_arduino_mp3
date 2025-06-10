@@ -1,3 +1,6 @@
+  Update June 10, 2024: Added youtube showing my working copy in action
+  See Youtube of my completed version: https://www.youtube.com/shorts/f6rNHZ0AX1o
+  
   This is my ugly mp3 player using these components
    - Arduino Mega 
    - Adafruit VS1053 MP3 Music play shield
@@ -16,7 +19,7 @@
    C = Pause present playing song and Resume Playing
    D = Toggle sequential Song Order or Shuffle
     * = Enter key of 3 digit song selection
-    # = Not Mapped or used yet
+    # = Toggle sequential Song Order or Shuffle
   
   SD card stores file names uppercase 8.3 filename (ie TRACK00x.MP3)
   My music player extracts the mp3 metadata from file of Title & Artist
