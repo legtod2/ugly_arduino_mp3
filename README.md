@@ -1,5 +1,6 @@
   Update June 10, 2024: Added youtube showing my working copy in action
-  See Youtube of my completed version: https://www.youtube.com/shorts/f6rNHZ0AX1o
+  See Youtube of my completed version: 
+  https://www.youtube.com/shorts/f6rNHZ0AX1o
   
   This is my ugly mp3 player using these components
    - Arduino Mega 
