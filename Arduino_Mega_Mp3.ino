@@ -1,30 +1,17 @@
 /*************************************************** 
-  This is my ugly mp3 player using these components
-   - Arduino Mega 
-   - Adafruit VS1053 MP3 Music play shield
-   - lcd1604_i2c 20x4 lcd display
-   - 4x4 Keypad 
-
-  Use 4x4 keypad to select 3 digit track # then hit * key to start playing
-  By default starts playing songs from track000.mp3 to track999.mp3 
-  Press the D key to use the shuffled songs order or press D key to return to sequential order
-  
-  Key Mapping: 
-   A = Next Song
-   B = Previous Song
-   C = Pause present playing song and Resume Playing
-   D = Toggle sequential Song Order or Shuffle
-   * = Enter key of 3 digit song selection
-   # = Not Mapped or used yet
-  
-  SD card stores file names uppercase 8.3 filename (ie TRACK00x.MP3)
+  Adafruit VS1053 MP3 Music play shield, lcd1604_i2c 20x4 lcd display, 4x4 Keypad 
+  ----> https://www.adafruit.com/products/1381
+  Product page: https://diyables.io/products/keypad-4x4
+  Use 4x4 keypad to select 3 digit track # 
+  A = Next Song
+  B = Previous Song
+  C = Pause present playing song and Resume Playing
+  D = Toggle sequential Song Order or Shuffle
+  * = Enter key of 3 digit song selection (Enter track # from keypad then * to start playing it
+  # = Not used or mapped to any function
+  SD card stores file names uppercase 8.3 filename (TRACK00x.MP3)
   My music player extracts the mp3 metadata from file of Title & Artist
-  
-  Prior to copying mp3 files to micro SD card I use the "EasyTag" app to edit the mp3 meta data.
-  This allows me to insure that the Title and Artist information is present to display to lcd
-  I renamed my music filename from original_mp3_filename.mp3 to tracknnn.mp3 (track000.mp3 to track999.mp3) 
-  then copy the renamed tracknnn.mp3 files to the root folder on the micro sd card.
-  Last Update: Sept 10, 2024
+  Last Update: June 21, 2025
  ****************************************************/
 
 // include SPI, MP3 and SD libraries
@@ -37,6 +24,7 @@
 LiquidCrystal_I2C lcd(0x27,20,4); 
 
 #include <DIYables_Keypad.h>  
+
 
 const int ROW_NUM = 4;     //four rows
 const int COLUMN_NUM = 4;  //four columns
@@ -71,10 +59,10 @@ DIYables_Keypad keypad = DIYables_Keypad(makeKeymap(keys), pin_rows, pin_column,
 Adafruit_VS1053_FilePlayer musicPlayer = 
   Adafruit_VS1053_FilePlayer(SHIELD_RESET, SHIELD_CS, SHIELD_DCS, DREQ, CARDCS);
 
-// Reminder Mega can store array of 32,767 bytes the file name array should reflect count of songs on sd  
-#define MaxInArray 100 // Was 1000
-#define max_title_len 60
-#define max_artist_len 30
+// Reminder Mega can store array of 8192 bytes the file name array should reflect count of songs on sd  
+#define MaxInArray 300 // Was 100
+#define max_title_len 20
+#define max_artist_len 20
 #define max_name_len 13
 
 char *fileName[MaxInArray];
@@ -102,16 +90,19 @@ boolean autoPlay = false;
 void setup() {
   Serial.begin(115200);
   lcd.init();                      // initialize the lcd 
+  lcd.init();
   // Print a message to the LCD.
   lcd.backlight();
-  lcd.setCursor(3,0);
-  lcd.print("MP3 Player");
-  lcd.setCursor(2,1);
-  lcd.print("Ywrobot Arduino!");
+  lcd.setCursor(0,0);
+  lcd.print("Ugly MP3 Player");
+  lcd.setCursor(0,1);
+  lcd.print("Version June 21,2025");
   lcd.setCursor(0,2);
-  lcd.print("Arduino LCM IIC 2004");
-  lcd.setCursor(2,3);
-  lcd.print("Power By Ec-yuan!");  
+  lcd.print("Powered by legtod2");
+  lcd.setCursor(0,3);
+  lcd.print("Reading SD Card");  
+
+  randomSeed(analogRead(8));
   
   Serial.println("Adafruit VS1053 MP3Player");
   
@@ -131,14 +122,14 @@ void setup() {
   Serial.println("SD OK!");
   
   // list files
-  printDirectory(SD.open("/"), 0); // populates fileName[] with root folder mp3 files and numberElementsInArray from sd card
-  // Init shuffle songs array (Init to be 0, 1, 2, x)
+  printDirectory(SD.open("/"), 0); // This enumerates all files on sd card in root folder ending with .MP3 into fileName array
+  // Build the shuffle songs array (Init to be 0, 1, 2, x)
   for (int i = 0; i< numberElementsInArray; i++) {
     shuffleSort[i] = i;
   }
-  buildshuffleSort(); // Now shuffle the order of the shuffle array
-  sortFileArray(); // Sorts fileName array for sequential song play order
-  printArray();  // Lists the contents fileName array (mp3 files on sd card
+  sortFileArray(); // Sorts fileName array
+  printArray();  // Lists the contents fileName array
+  buildshuffleSort();
   helpmsg(); 
  
   // Set volume for left, right channels. lower numbers == louder volume!
@@ -185,8 +176,22 @@ void loop() {
   lcd.print(String(tempString));      
   
   if (! musicPlayer.startPlayingFile(tempString)) {
-    Serial.println("Could not open file [" + String(tempString) + "]");
-    while (1);
+    Serial.println("Could not open file [" + String(tempString) + "] trying again");
+    delay(500);
+    t=0;
+    strcpy(tempString,fileName[t]);
+    get_title_from_id3tag();
+    get_artist_from_id3tag();
+    Serial.println(String(title) + " - " + String(artist));
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print(String(title));  
+    lcd.setCursor(0,2);
+    lcd.print(String(artist)); 
+    lcd.setCursor(0,3);
+    lcd.print(String(tempString));    
+    musicPlayer.startPlayingFile(tempString);
+    // while (1);
   }
   
   Serial.println("Playing track [" + String(t) + "] ... [" + String(tempString) + "]");
@@ -209,12 +214,14 @@ void loop() {
     }
 
     // Toggle Sort order (Sequential/Shuffle)
-    if (key == '#') {
+    if (key == 'D') {
+      mystring="";
       if (ShuffleSongs) {
         ShuffleSongs = false;
+        Serial.println("Turning Off Shuffle songs");
       }else {
         ShuffleSongs = true;
-      
+        Serial.println("Turning On Shuffle songs");
       }
     }
 
@@ -489,7 +496,7 @@ void loop() {
         mydirection = true;
       }
       lcd.setCursor(mydot,0);
-      lcd.print("<-");
+      lcd.print("<-"); 
     }
     delay(10); // Get rid of delay and use milli() counter
   } // end while
@@ -502,16 +509,15 @@ void loop() {
 } // end loop
 
 void buildshuffleSort() {
-  // Lets shuffle randomly 2 - 5 times
-  for (int myi = 0; i < random(2,5); myi++) {
+  for (int myi = 0; myi < random(2,5); myi++) { 
     for (int i = 0; i < numberElementsInArray; i++){
       int j = random(0, numberElementsInArray - i);
 
       int t = shuffleSort[i];
       shuffleSort[i] = shuffleSort[j];
       shuffleSort[j] = t;
-    }  
-  }
+    }
+  }  
 }
 
 void freeMessageMemory()
@@ -636,6 +642,9 @@ void printDirectory(File dir, int numTabs) {
      entry.close();
    }
    Serial.println("Found [" + String(numberElementsInArray) + "] mp3 files");
+   lcd.setCursor(0,3);
+   lcd.print("Found:" + String(numberElementsInArray) + " mp3 files");  
+   delay(5000);
 }
 
 void get_title_from_id3tag () {
